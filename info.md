@@ -93,3 +93,21 @@ fixes that helped:
 - ran ollama as a background service so it manages its own memory separately from the python process
 
 still, on first load its slow. once everything is warm it runs fine.
+
+---
+
+## other fixes
+
+**hardcoded paths**
+early on the pdf path and a few other paths were written as full absolute paths like `/home/blaze/...`. obviously breaks on any other machine. fixed by using `os.path.join(os.path.dirname(__file__), ...)` everywhere so paths are relative to the file location.
+
+also had some hardcoded values in the whisper initial_prompt that were specific to the nepali biography pdf. changed it to pull a sample from whatever is in chromadb instead, so it works with any document.
+
+**system prompt tuning**
+the llm system prompt went through a lot of iterations. early versions were too strict (only one item in answer), then too loose (dumping all context). also had the model occasionally outputting markdown formatting which would get read aloud by tts. took a few rounds of writing good/bad examples in the prompt before it behaved properly.
+
+---
+
+## notes on development
+
+used an ai assistant (claude/antigravity) for parts of this — mainly for debugging the prompt engineering, fixing the stt pipeline, and writing the documentation. the core decisions around model selection, chunking strategy, and architecture were figured out through trial and error while building it.
