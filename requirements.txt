@@ -6,3 +6,10 @@ sentence-transformers
 chromadb
 requests
 python-dotenv
+
+livekit-agents
+livekit-plugins-openai
+livekit-plugins-google
+livekit-plugins-noise-cancellation
+pydantic-ai-slim[openai, mcp]
+protobuf==6.33.6
