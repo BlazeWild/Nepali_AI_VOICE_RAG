@@ -42,7 +42,7 @@ class RAGEngine:
             docs = results["documents"][0]
             dists = results["distances"][0]
             for doc, dist in zip(docs, dists):
-                if dist < 1.35:
+                if dist < 1.65:
                     valid_docs.append(doc)
 
         context = "\n\n".join(valid_docs) if valid_docs else "NO_RELEVANT_CONTEXT"
