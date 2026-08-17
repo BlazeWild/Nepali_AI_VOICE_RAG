@@ -15,7 +15,7 @@ EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
 
 
 def extract_pdf_with_spatial_ocr(pdf_path: str):
-    # reads pdf using pymupdf ocr, nep+eng at 300dpi
+    # reads pdf using pymupdf ocr, nep+eng at 300dpi, fallback to get_text() if needed
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
@@ -23,22 +23,31 @@ def extract_pdf_with_spatial_ocr(pdf_path: str):
     pages = []
 
     for page_number, page in enumerate(doc):
-        tp = page.get_textpage_ocr(language="nep+eng", tessdata=TESSDATA_DIR, dpi=300, full=True)
-        d = tp.extractDICT()
+        text = ""
+        try:
+            tp = page.get_textpage_ocr(language="nep+eng", tessdata=TESSDATA_DIR, dpi=300, full=True)
+            d = tp.extractDICT()
 
-        output_lines = []
-        for block in d.get("blocks", []):
-            for line in block.get("lines", []):
-                line_text = ""
-                for span in line.get("spans", []):
-                    line_text += span.get("text", "") + " "
+            output_lines = []
+            for block in d.get("blocks", []):
+                for line in block.get("lines", []):
+                    line_text = ""
+                    for span in line.get("spans", []):
+                        line_text += span.get("text", "") + " "
 
-                line_text = line_text.strip()
-                line_text = re.sub(r'[ \t]+', ' ', line_text)  # cleanup extra spaces
-                if line_text:
-                    output_lines.append(line_text)
+                    line_text = line_text.strip()
+                    line_text = re.sub(r'[ \t]+', ' ', line_text)  # cleanup extra spaces
+                    if line_text:
+                        output_lines.append(line_text)
 
-        text = "\n".join(output_lines)
+            text = "\n".join(output_lines)
+        except Exception as e:
+            print(f"OCR warning on page {page_number+1}: {e}, falling back to direct text extraction...")
+            text = page.get_text()
+
+        if not text.strip():
+            text = page.get_text()
+
         if text.strip():
             pages.append({"page": page_number + 1, "text": text.strip()})
 

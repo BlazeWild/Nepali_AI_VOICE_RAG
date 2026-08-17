@@ -1,31 +1,29 @@
-# voice rag
+# 🇳🇵 Real-Time Nepali AI Voice RAG Assistant
 
-a local voice-in voice-out rag system in nepali. speak a question, it transcribes, retrieves context from a pdf, generates a nepali answer using a local llm, and speaks it back.
+A sub-second, real-time Nepali AI Voice Assistant powered by Retrieval-Augmented Generation (RAG), Speech-to-Text (STT), Large Language Models (LLM), and Text-to-Speech (TTS).
 
-no cloud, no api keys for inference. runs fully offline once set up.
+---
 
-## what it does
+## 🛠️ Execution Modes & Setup Guides
 
-- takes voice input via browser mic
-- transcribes using faster-whisper (large-v3-turbo)
-- retrieves relevant chunks from chromadb using multilingual embeddings
-- generates a nepali answer with qwen2.5:3b through ollama
-- speaks the answer back using edge-tts (nepali neural voice)
+### 1. 🏠 Local Agent (`local_agent/`)
+* **Quick Start**: `python local_agent/run.py`
+* **Setup & Guide**: Refer to **[local_agent/setup.md](local_agent/setup.md)** for installation, environment configuration, and execution instructions.
+* **Problems & Solutions**: Refer to **[local_agent/problems_and_solutions.md](local_agent/problems_and_solutions.md)** for in-depth analysis on STT/LLM model parameter limits (<15B models), Nepali generation trade-offs, and hardware optimizations.
 
-## structure
+### 2. ⚡ Realtime API Agent (`live_agent/`)
+* **Setup & Guide**: Refer to **[live_agent/setup.md](live_agent/setup.md)** for setting up and running the WebSocket Realtime API agent.
 
+---
+
+## 🚀 Quick Start (Local Agent)
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Launch Local Agent
+python local_agent/run.py
 ```
-voice_rag/
-├── app.py          - streamlit ui
-├── config.py       - all constants
-├── speech.py       - stt + tts
-├── rag.py          - retrieval + llm
-├── prompts/
-│   └── nepali_rag.txt
-└── database/
-    └── chunk.py    - pdf ocr + chunking + indexing
-```
 
-## setup
-
-see instructions.md
+Open your browser at `http://localhost:8000` to interact with the assistant.

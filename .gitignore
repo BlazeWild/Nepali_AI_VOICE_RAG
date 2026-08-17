@@ -1,6 +1,19 @@
-__pycache__
+# Environment variables
 .env
-.vscode
-chroma_db/
-database/tessdata/
+.env.local
+
+# Python caches & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Temporary audio artifacts
 *.mp3
+*.wav

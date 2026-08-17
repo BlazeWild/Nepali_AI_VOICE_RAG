@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ne">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>नेपाली AI Voice RAG Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #070913;
+            --card-bg: rgba(18, 22, 41, 0.75);
+            --border: rgba(139, 92, 246, 0.2);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --accent: #ec4899;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(236, 72, 153, 0.12) 0%, transparent 40%);
+        }
+
+        /* Header */
+        header {
+            width: 100%;
+            max-width: 900px;
+            padding: 24px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c084fc, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #64748b;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .status-dot.listening {
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .status-dot.speaking {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Main Container */
+        main {
+            width: 100%;
+            max-width: 800px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        /* Orb Visualizer */
+        .orb-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .orb-wrapper {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .orb {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
+            box-shadow: 0 0 50px var(--primary-glow);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            position: relative;
+            z-index: 2;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .orb::after {
+            content: "🎙️";
+            font-size: 2.2rem;
+        }
+
+        .orb.speaking {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .orb.listening {
+            box-shadow: 0 0 80px rgba(236, 72, 153, 0.6);
+            transform: scale(1.08);
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 30px var(--primary-glow);
+            }
+
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 70px rgba(236, 72, 153, 0.7);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 30px var(--primary-glow);
+            }
+        }
+
+        .status-text {
+            margin-top: 16px;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            min-height: 24px;
+        }
+
+        /* Chat History Stream */
+        .chat-container {
+            width: 100%;
+            height: 380px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            border-radius: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 0.98rem;
+            line-height: 1.5;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(79, 70, 229, 0.3));
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            color: var(--text);
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.assistant {
+            align-self: flex-start;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-role {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .latency-tag {
+            font-size: 0.72rem;
+            color: rgba(255, 255, 255, 0.4);
+            align-self: flex-end;
+            margin-top: 4px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 30px;
+            border: none;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            box-shadow: 0 4px 20px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(139, 92, 246, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.8);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(51, 65, 85, 0.9);
+        }
+
+        footer {
+            padding: 16px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">
+            <span>🎙️</span> नेपाली AI Voice Assistant
+        </div>
+        <div class="status-badge">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusBadgeText">Disconnected</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="orb-section">
+            <div class="orb-wrapper">
+                <div id="orb" class="orb" onclick="toggleConnection()"></div>
+            </div>
+            <div id="statusText" class="status-text">Click orb to start call</div>
+        </div>
+
+        <div id="chatBox" class="chat-container">
+        </div>
+    </main>
+
+    <footer>
+        Nepali Voice RAG • Real-Time Voice Assistant
+    </footer>
+
+    <script>
+        let ws = null;
+        let audioContext = null;
+        let mediaStream = null;
+        let scriptProcessor = null;
+        let isConnected = false;
+        let currentAssistantCard = null;
+        let currentAssistantText = "";
+
+        const statusDot = document.getElementById("statusDot");
+        const statusBadgeText = document.getElementById("statusBadgeText");
+        const statusText = document.getElementById("statusText");
+        const chatBox = document.getElementById("chatBox");
+        const orb = document.getElementById("orb");
+
+        async function toggleConnection() {
+            if (isConnected) {
+                disconnect();
+            } else {
+                await connect();
+            }
+        }
+
+        async function connect() {
+            try {
+                statusText.innerText = "Connecting to WebSocket...";
+                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const wsUrl = `${protocol}//${window.location.host}/ws/realtime`;
+
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = async () => {
+                    isConnected = true;
+                    statusDot.className = "status-dot connected";
+                    statusBadgeText.innerText = "Connected";
+                    statusText.innerText = "Ready — speak into microphone";
+
+                    await startMicrophone();
+                };
+
+                ws.onmessage = async (event) => {
+                    const msg = JSON.parse(event.data);
+                    handleServerMessage(msg);
+                };
+
+                ws.onclose = () => {
+                    disconnect();
+                };
+
+                ws.onerror = (err) => {
+                    console.error("WS Error:", err);
+                    disconnect();
+                };
+
+            } catch (err) {
+                console.error("Connect failed:", err);
+                statusText.innerText = "Connection failed: " + err.message;
+            }
+        }
+
+        function disconnect() {
+            isConnected = false;
+            if (ws) { ws.close(); ws = null; }
+            stopMicrophone();
+
+            statusDot.className = "status-dot";
+            statusBadgeText.innerText = "Disconnected";
+            statusText.innerText = "Disconnected. Click orb to reconnect.";
+            orb.className = "orb";
+        }
+
+        async function startMicrophone() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                scriptProcessor = audioContext.createScriptProcessor(1024, 1, 1);
+
+                scriptProcessor.onaudioprocess = (e) => {
+                    if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) return;
+                    const inputBuffer = e.inputBuffer.getChannelData(0);
+                    ws.send(inputBuffer.buffer);
+                };
+
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+            } catch (err) {
+                console.error("Microphone Error:", err);
+                statusText.innerText = "Microphone access denied or unsupported";
+            }
+        }
+
+        function stopMicrophone() {
+            if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            if (audioContext) { audioContext.close(); audioContext = null; }
+        }
+
+        let audioQueue = [];
+        let isPlayingAudio = false;
+
+        async function handleServerMessage(msg) {
+            switch (msg.type) {
+                case "vad":
+                    if (msg.is_speech) {
+                        orb.className = "orb listening";
+                        statusDot.className = "status-dot listening";
+                    } else if (!isPlayingAudio) {
+                        orb.className = "orb";
+                        statusDot.className = "status-dot connected";
+                    }
+                    break;
+
+                case "status":
+                    statusText.innerText = msg.data;
+                    break;
+
+                case "transcript":
+                    addMessage("user", msg.data, msg.latency_ms ? `${msg.latency_ms}ms` : null);
+                    currentAssistantCard = null;
+                    currentAssistantText = "";
+                    break;
+
+                case "llm_started":
+                    statusText.innerText = "AI is replying...";
+                    break;
+
+                case "token":
+                    if (!currentAssistantCard) {
+                        currentAssistantCard = addMessage("assistant", "", null);
+                    }
+                    currentAssistantText += msg.data;
+                    currentAssistantCard.querySelector(".msg-body").innerText = currentAssistantText;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    break;
+
+                case "audio":
+                    orb.className = "orb speaking";
+                    statusDot.className = "status-dot speaking";
+                    if (msg.sentence) {
+                        if (!currentAssistantCard) {
+                            currentAssistantCard = addMessage("assistant", "", null);
+                        }
+                        if (!currentAssistantText.includes(msg.sentence)) {
+                            currentAssistantText += (currentAssistantText ? " " : "") + msg.sentence;
+                            currentAssistantCard.querySelector(".msg-body").innerText = currentAssistantText;
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    }
+                    queueAudioPayload(msg.data);
+                    break;
+
+                case "done":
+                    statusText.innerText = "Ready — speak into microphone";
+                    currentAssistantCard = null;
+                    currentAssistantText = "";
+                    break;
+
+                case "interrupted":
+                    audioQueue = [];
+                    isPlayingAudio = false;
+                    orb.className = "orb";
+                    statusText.innerText = "Barge-in interrupted";
+                    currentAssistantCard = null;
+                    currentAssistantText = "";
+                    break;
+            }
+        }
+
+        function addMessage(role, text, latencyText) {
+            const div = document.createElement("div");
+            div.className = `chat-message ${role}`;
+            div.innerHTML = `
+                <div class="msg-role">${role === "user" ? "तपाईं (User)" : "AI सहायक"}</div>
+                <div class="msg-body">${text}</div>
+                ${latencyText ? `<div class="latency-tag">⚡ ${latencyText}</div>` : ""}
+            `;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return div;
+        }
+
+        function queueAudioPayload(base64Mp3) {
+            const binaryStr = atob(base64Mp3);
+            const len = binaryStr.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryStr.charCodeAt(i);
+            }
+            audioQueue.push(bytes.buffer);
+            if (!isPlayingAudio) {
+                playNextInQueue();
+            }
+        }
+
+        async function playNextInQueue() {
+            if (audioQueue.length === 0) {
+                isPlayingAudio = false;
+                orb.className = "orb";
+                statusDot.className = "status-dot connected";
+                return;
+            }
+            isPlayingAudio = true;
+            const audioData = audioQueue.shift();
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const buffer = await ctx.decodeAudioData(audioData);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.onended = () => {
+                    playNextInQueue();
+                };
+                source.start(0);
+            } catch (err) {
+                console.error("Audio Playback Error:", err);
+                playNextInQueue();
+            }
+        }
+    </script>
+</body>
+
+</html>
