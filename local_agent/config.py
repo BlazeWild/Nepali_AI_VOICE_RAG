@@ -6,8 +6,8 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
-# LLM Config (toggle USE_GEMINI to switch between Gemini API & local Ollama)
-USE_GEMINI = os.getenv("USE_GEMINI", "true").lower() == "true"
+# LLM Config (Set to True for Gemini API, False for local Ollama)
+USE_GEMINI = True
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
