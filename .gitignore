@@ -1,0 +1,6 @@
+__pycache__
+.env
+.vscode
+chroma_db/
+database/tessdata/
+*.mp3
