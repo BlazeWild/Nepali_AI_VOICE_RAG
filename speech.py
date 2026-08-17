@@ -1,48 +1,68 @@
 import os
 import tempfile
 import asyncio
+import torch
 import edge_tts
 import streamlit as st
-from faster_whisper import WhisperModel
-from config import WHISPER_MODEL_SIZE, TTS_VOICE
+from config import QWEN_ASR_MODEL, TTS_VOICE
+
+_STT_MODEL_CACHE = None
 
 
-@st.cache_resource
-def load_whisper():
-    return WhisperModel(WHISPER_MODEL_SIZE, device="cpu", compute_type="int8")
+def load_qwen_asr():
+    """Load and cache Qwen3-ASR-Nepali fine-tuned model for Nepali speech recognition."""
+    global _STT_MODEL_CACHE
+    if _STT_MODEL_CACHE is not None:
+        return _STT_MODEL_CACHE
+
+    from qwen_asr import Qwen3ASRModel
+
+    print("Pre-loading Qwen3-ASR-Nepali model...")
+    if torch.cuda.is_available():
+        try:
+            # 8-bit quantization fits in ~1.7GB VRAM safely
+            _STT_MODEL_CACHE = Qwen3ASRModel.from_pretrained(
+                QWEN_ASR_MODEL,
+                load_in_8bit=True,
+                device_map="cuda"
+            )
+        except Exception:
+            _STT_MODEL_CACHE = Qwen3ASRModel.from_pretrained(
+                QWEN_ASR_MODEL,
+                dtype=torch.float16,
+                device_map="auto",
+                max_memory={0: "2.5GiB", "cpu": "16GiB"}
+            )
+    else:
+        _STT_MODEL_CACHE = Qwen3ASRModel.from_pretrained(
+            QWEN_ASR_MODEL,
+            dtype=torch.float32,
+            device_map="cpu"
+        )
+    return _STT_MODEL_CACHE
 
 
 def transcribe_speech(audio_bytes: bytes, language: str = "ne") -> str:
-    # dump audio bytes to a temp file so whisper can read it
+    """Transcribe audio bytes using pre-loaded Qwen3-ASR-Nepali model."""
+    if not audio_bytes:
+        return ""
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
         f.write(audio_bytes)
         tmp_path = f.name
 
-    model = load_whisper()
-    lang_param = language if language != "auto" else None
-
-    # pull a sample from db to prime whisper with actual doc vocabulary
-    # helps a lot with dialect words and broken STT
     try:
-        from rag import load_chroma
-        sample = load_chroma().get(limit=1)
-        initial_prompt = sample["documents"][0][:200] if sample["documents"] else None
-    except Exception:
-        initial_prompt = None
-
-    segments, _ = model.transcribe(
-        tmp_path,
-        beam_size=10,
-        language=lang_param,
-        vad_filter=True,
-        initial_prompt=initial_prompt
-    )
-    text = " ".join(s.text for s in segments).strip()
-
-    try:
-        os.remove(tmp_path)
-    except Exception:
-        pass
+        model = load_qwen_asr()
+        results = model.transcribe(tmp_path)
+        text = "".join(getattr(r, "text", str(r)) for r in results).strip()
+    except Exception as e:
+        st.error(f"STT Error: {e}")
+        text = ""
+    finally:
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
 
     return text
 
